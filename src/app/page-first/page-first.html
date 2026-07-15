@@ -1,0 +1,33 @@
+<div class="control-row">
+
+  <input
+    [(ngModel)]="theme"
+    placeholder="sunset, ocean, forest, neon..."
+    (keyup.enter)="generate()">
+
+  <button
+    (click)="generate()">
+    Search
+  </button>
+
+</div>
+
+<div class="palette-grid">
+
+  @for (color of colors; track color.hex) {
+
+    <div
+      class="color-card"
+      [style.background]="color.hex"
+      [style.color]="textColor(color)"
+      (click)="selectColor(color)">
+
+      <h3>{{color.hex}}</h3>
+
+      <p>{{color.name}}</p>
+
+    </div>
+
+  }
+
+</div>

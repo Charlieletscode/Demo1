@@ -1,0 +1,663 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background-color: #0a0a0c;
+  color: #f3f4f6;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  padding: 2rem;
+  box-sizing: border-box;
+  cursor: none;
+}
+
+// Hide the native cursor on all interactive elements too, so only the glow shows.
+:host * {
+  cursor: none !important;
+}
+
+// While aiming (after double-click), freeze every animation on the page so the
+// color under the cursor dot stays perfectly stable until the confirm click.
+// The cursor orb itself is excluded so it can still shrink smoothly.
+:host.frozen *:not(.cursor-orb):not(.cursor-orb *) {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+
+.studio-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.studio-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  position: relative;
+  z-index: 1001;
+
+  .title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem;
+    background: linear-gradient(135deg, #a855f7, #ec4899, #ef4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    color: #9ca3af;
+    margin: 0;
+    font-weight: 400;
+  }
+}
+
+.control-row {
+  display: flex;
+  gap: 1rem;
+  max-width: 600px;
+  margin: 0 auto 4rem;
+  align-items: center;
+  position: relative;
+  z-index: 1001;
+
+  .input-wrapper {
+    flex: 1;
+    position: relative;
+  }
+
+  .theme-input {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-size: 1.125rem;
+    background-color: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 1rem;
+    color: #fff;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+
+    &::placeholder {
+      color: #52525b;
+    }
+
+    &:focus {
+      border-color: #a855f7;
+      box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+
+  .generate-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #a855f7, #ec4899);
+    border: none;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(236, 72, 153, 0.3);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      background: #27272a;
+      box-shadow: none;
+      color: #71717a;
+    }
+  }
+}
+
+.spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.done-status {
+  background-color: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  width: max-content;
+  margin: 0 auto 2rem;
+  font-weight: 600;
+  z-index: 10;
+  position: relative;
+  animation: fadeSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.error-message {
+  text-align: center;
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  max-width: 600px;
+  margin: 0 auto 2rem;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.color-card {
+  position: relative;
+  height: 220px;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeSlideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(0, 0, 0, 0.1) 100%);
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .card-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .color-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .color-name {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .color-role {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    opacity: 0.8;
+  }
+
+  .color-hex {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 1.125rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+    opacity: 0.9;
+  }
+}
+
+.copied-toast {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+  animation: popIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.skeleton {
+  background: #18181b;
+  animation: shimmer 2s infinite linear;
+  background-image: linear-gradient(
+    90deg,
+    #18181b 0px,
+    #27272a 40px,
+    #18181b 80px
+  );
+  background-size: 600px;
+  opacity: 1;
+  transform: none;
+  box-shadow: none;
+  cursor: default;
+
+  &:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  &::before {
+    display: none;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -300px; }
+  100% { background-position: 300px; }
+}
+
+@media (max-width: 768px) {
+  .studio-header .title {
+    font-size: 2.5rem;
+  }
+  
+  .control-row {
+    flex-direction: column;
+    
+    .generate-btn {
+      width: 100%;
+    }
+  }
+}
+
+.rainbow-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: overlayFade 0.4s ease both;
+  background-color: #000;
+
+  &.is-done {
+    box-shadow: inset 0 0 200px rgba(255, 255, 255, 0.25);
+
+    .rainbow-blend {
+      filter: saturate(1.5) brightness(1.15);
+    }
+
+    .layer-1 { animation-duration: 3s; }
+    .layer-2 { animation-duration: 4s; }
+    .layer-3 { animation-duration: 5s; }
+  }
+
+  // Freeze the flowing rainbow while aiming, so the pixel under the cursor
+  // dot stays accurate for the confirm click.
+  &.paused .rainbow-blend {
+    animation-play-state: paused;
+  }
+}
+
+.rainbow-bloom {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  background: radial-gradient(circle at 50% 55%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 55%);
+  mix-blend-mode: screen;
+  filter: blur(20px);
+  animation: bloomPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes bloomPulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.15); }
+}
+
+// Single static vertical gradient: color at any Y is exactly computable, so the
+// cursor dot can pick the precise color it sits on.
+.rainbow-static {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+// A single water ripple spawned at the cursor: a thin ring that expands and
+// fades out from its drop point, like a finger touching a still water surface.
+// Translucent overlay only — the rainbow + color picking are unaffected.
+.water-ripple {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.15);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: blur(0.5px);
+  // Layered caustic rings: faint inner ring, crisp bright rim ~62%, soft falloff
+  // — reads like light refracting on a water surface. (Light/default tone.)
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0.18) 52%,
+    rgba(255, 255, 255, 0.55) 62%,
+    rgba(255, 255, 255, 0.15) 72%,
+    rgba(255, 255, 255, 0) 84%
+  );
+  will-change: transform, opacity;
+  animation: rippleSpawn 3000ms cubic-bezier(0.16, 0.7, 0.3, 1) forwards;
+}
+
+// Dark ripple variant (over bright backgrounds) — matches the cursor tone.
+.water-ripple.ripple-dark {
+  mix-blend-mode: multiply;
+  background: radial-gradient(
+    circle,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.04) 30%,
+    rgba(0, 0, 0, 0) 40%,
+    rgba(0, 0, 0, 0.12) 52%,
+    rgba(0, 0, 0, 0.32) 62%,
+    rgba(0, 0, 0, 0.1) 72%,
+    rgba(0, 0, 0, 0) 84%
+  );
+}
+
+@keyframes rippleSpawn {
+  0% {
+    transform: translate(-50%, -50%) scale(0.15);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  55% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(11);
+    opacity: 0;
+  }
+}
+
+// Radial bloom: expands as a circle from the click point, revealing the new
+// palette underneath, then disappears so the cycle takes over.
+// Watercolor bloom: spreads slowly and organically from the click point, with
+// a wide, soft, blurred rim that bleeds outward like ink on wet paper.
+.rainbow-bloom-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  pointer-events: none;
+  // A fixed soft blob centered at the click point. It GROWS by scaling (not a
+  // clip-path ripple), so combined with turbulence + blur it billows outward
+  // like dye diffusing through water.
+  -webkit-mask: radial-gradient(
+    circle at var(--bx, 50%) var(--by, 50%),
+    #000 0%,
+    #000 22%,
+    rgba(0, 0, 0, 0.7) 34%,
+    rgba(0, 0, 0, 0.3) 42%,
+    rgba(0, 0, 0, 0) 48%
+  );
+  mask: radial-gradient(
+    circle at var(--bx, 50%) var(--by, 50%),
+    #000 0%,
+    #000 22%,
+    rgba(0, 0, 0, 0.7) 34%,
+    rgba(0, 0, 0, 0.3) 42%,
+    rgba(0, 0, 0, 0) 48%
+  );
+  transform-origin: var(--bx, 50%) var(--by, 50%);
+  transform: scale(0.05);
+  // Very slow, organic diffusion.
+  animation: bloomExpand 5500ms cubic-bezier(0.33, 0.72, 0.25, 1) forwards;
+}
+
+// The blob scales up while url(#inkTurb) warps it and heavy blur keeps it
+// dissolved -> cloud-like diffusing dye, not a hard expanding ring. Brightness
+// starts dim so it's gentle on the eyes, then eases back to normal.
+@keyframes bloomExpand {
+  0% {
+    transform: scale(0.05);
+    opacity: 0.55;
+    filter: url(#inkTurb) blur(30px) brightness(0.78) saturate(1.05);
+  }
+  35% {
+    transform: scale(2.2);
+    opacity: 0.85;
+    filter: url(#inkTurb) blur(24px) brightness(0.82) saturate(1.04);
+  }
+  70% {
+    transform: scale(5);
+    opacity: 1;
+    filter: url(#inkTurb) blur(16px) brightness(0.9) saturate(1.02);
+  }
+  88% {
+    transform: scale(7);
+    opacity: 1;
+    filter: url(#inkTurb) blur(8px) brightness(1) saturate(1);
+  }
+  100% {
+    transform: scale(7.5);
+    opacity: 0;
+    filter: url(#inkTurb) blur(8px) brightness(1) saturate(1);
+  }
+}
+
+// Hidden container for the SVG filter definition.
+.ink-filter-defs {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.rainbow-blend {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -50%;
+  height: 200%;
+  width: 100%;
+  will-change: transform;
+  filter: saturate(1.15);
+  animation: blendFlow 6s ease-in-out infinite alternate;
+
+  &.layer-1 {
+    mix-blend-mode: normal;
+    opacity: 1;
+    animation-duration: 6s;
+  }
+
+  &.layer-2 {
+    mix-blend-mode: overlay;
+    opacity: 0.7;
+    animation-duration: 8s;
+    animation-direction: alternate-reverse;
+  }
+
+  &.layer-3 {
+    mix-blend-mode: screen;
+    opacity: 0.5;
+    animation-duration: 10s;
+  }
+}
+
+@keyframes blendFlow {
+  0% { transform: translateY(-25%); }
+  100% { transform: translateY(0%); }
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.rainbow-caption {
+  position: relative;
+  z-index: 1001;
+  font-size: 3rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: pulseText 2s ease-in-out infinite alternate;
+  text-align: center;
+  padding: 0 2rem;
+  mix-blend-mode: difference;
+}
+
+@keyframes pulseText {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+.rainbow-caption.rainbow-done {
+  font-size: 6rem;
+  color: #ffffff;
+  mix-blend-mode: normal;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.9), 0 4px 30px rgba(0, 0, 0, 0.6);
+  animation: donePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes donePop {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.done-wrap {
+  position: relative;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.done-hint {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.04em;
+  animation: hintPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.cursor-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2000;
+}
+
+.cursor-orb {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  // Hollow bubble: transparent center, a thin dim ring drawn with an adaptive
+  // outline color (dark on bright backgrounds, light on dark ones).
+  background: transparent;
+  border: 1.5px solid var(--cursor-outline, rgba(255, 255, 255, 0.95));
+  opacity: 0.55;
+  // Subtle halo so the ring stays legible without being harsh.
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.18),
+    0 0 8px 1px rgba(0, 0, 0, 0.15);
+  will-change: transform;
+  // Only size/appearance transitions -> position still follows instantly.
+  transition: width 0.25s ease, height 0.25s ease, border-color 0.15s ease;
+
+  // Aiming state (after double-click): ring collapses into a small solid dot
+  // filled 100% with the picked color, so what you see == what gets picked.
+  &.aiming {
+    width: 26px;
+    height: 26px;
+    // Fully opaque while aiming so the picked color reads clearly.
+    opacity: 1;
+    // Solid picked-color center so the hue reads clearly.
+    background: var(--hover-color, #ffffff);
+    // Soft feathered/glowing rim instead of a hard solid outline.
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+      0 0 6px 2px var(--cursor-outline, rgba(255, 255, 255, 0.5)),
+      0 0 14px 6px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.cursor-trail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 70%);
+  filter: blur(2px);
+  mix-blend-mode: screen;
+  will-change: transform;
+}

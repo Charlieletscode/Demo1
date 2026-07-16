@@ -36,12 +36,12 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",    // ← INCREASE THIS
+                  "maximumWarning": "500kB",    
                   "maximumError": "1MB"   
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "20kB",   // ← Change this
+                  "maximumWarning": "20kB",   
                   "maximumError": "50kB"
                 }
               ],
@@ -71,7 +71,12 @@
           "builder": "@angular/build:unit-test"
         },
         "deploy": {
-          "builder": "angular-cli-ghpages:deploy"
+          "builder": "angular-cli-ghpages:deploy",
+          "options": {
+            "baseHref": "https://github.com/Charlieletscode/Demo1",
+            "name": "Charlie",
+            "email": "ycc88@bu.edu"
+          }
         }
       }
     }

@@ -1,33 +1,213 @@
-<div class="control-row">
+<div class="studio-container">
+  <div class="control-row">
+    <!-- Frosted glass card wrapper (feature #8) — the input floats on a
+         translucent panel with a hairline border, giving it a MacOS/iOS
+         "control resting on water" feel. -->
+    <div class="glass-card">
+      <input
+        type="text"
+        [(ngModel)]="theme"
+        (keyup.enter)="generate()"
+        placeholder="try: sunset, ocean, forest, neon, aurora, candy..."
+        class="theme-input"
+        [disabled]="loading"
+      >
+    </div>
+  </div>
 
-  <input
-    [(ngModel)]="theme"
-    placeholder="sunset, ocean, forest, neon..."
-    (keyup.enter)="generate()">
-
-  <button
-    (click)="generate()">
-    Search
-  </button>
-
+  <div class="palette-grid">
+    @if (loading) {
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <div class="color-card skeleton"></div>
+      }
+    } @else {
+      @for (c of colors; track c.hex; let i = $index) {
+        <div 
+          class="color-card" 
+          [style.backgroundColor]="c.hex"
+          [style.color]="textColor(c)"
+          [style.animationDelay]="(i * 0.1) + 's'"
+          (click)="selectColor(c)"
+          (mouseenter)="onCardEnter(c)"
+          (mouseleave)="onCardLeave()">
+          
+        </div>
+      }
+    }
+  </div>
 </div>
 
-<div class="palette-grid">
+@if (showRainbow) {
+  <div class="rainbow-overlay" (mousemove)="onOverlayMouseMove()">
+    <div class="rainbow-static" [style.background]="rainbowGradient"></div>
+    <!-- Both effects live in the DOM permanently; the ACTIVE one is chosen
+         by `useWaterSim` (recomputed each frame from the palette's hue count).
+         Water sim: monotone palettes (≤2 hues). Ring ripples: colorful (>2). -->
+    <canvas
+      #waterCanvas
+      class="water-canvas"
+      aria-hidden="true"
+      [style.display]="useWaterSim ? 'block' : 'none'"
+    ></canvas>
+    @for (r of ripples; track r.id) {
+      <div
+        class="water-ripple"
+        [class.ripple-dark]="r.tone === 'dark'"
+        aria-hidden="true"
+        [style.left.px]="r.x"
+        [style.top.px]="r.y"
+      ></div>
+    }
+  </div>
+}
 
-  @for (color of colors; track color.hex) {
+@if (bloomActive) {
+  <!-- SVG ink-turbulence filter: warps the bloom's soft circle into billowing,
+       wispy ink tendrils like real dye diffusing in water. -->
+  <svg class="ink-filter-defs" aria-hidden="true" width="0" height="0">
+    <defs>
+      <filter id="inkTurb" x="-50%" y="-50%" width="200%" height="200%">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.008 0.014"
+          numOctaves="3"
+          [attr.seed]="bloomSeed"
+          result="noise"
+        >
+          <animate
+            attributeName="baseFrequency"
+            dur="2.8s"
+            values="0.008 0.014; 0.012 0.018; 0.007 0.012"
+            keyTimes="0; 0.6; 1"
+            fill="freeze"
+          />
+        </feTurbulence>
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="noise"
+          scale="55"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+    </defs>
+  </svg>
 
+  <div
+    class="rainbow-bloom-layer"
+    [style.background]="bloomGradient"
+    [style.--bx.px]="bloomX"
+    [style.--by.px]="bloomY"
+  ></div>
+}
+
+@if (cursorVisible) {
+  <div class="cursor-layer" aria-hidden="true">
+    @for (t of trail; track $index) {
+      <div
+        class="cursor-trail"
+        [style.transform]="'translate(-50%, -50%) translate(' + t.x + 'px,' + t.y + 'px)'"
+        [style.opacity]="1 - $index / trail.length"
+      ></div>
+    }
     <div
-      class="color-card"
-      [style.background]="color.hex"
-      [style.color]="textColor(color)"
-      (click)="selectColor(color)">
+      class="cursor-orb"
+      [class.aiming]="aiming"
+      [style.transform]="'translate(-50%, -50%) translate(' + cursorPos.x + 'px,' + cursorPos.y + 'px)'"
+      [style.--hover-color]="hoverColor"
+      [style.--cursor-outline]="outlineColor"
+    ></div>
+  </div>
+}
 
-      <h3>{{color.hex}}</h3>
+<!-- Cursor droplets (feature #7): micro particles sprayed on fast motion.
+     Each self-removes after DROPLET_LIFE_MS via a setTimeout in the class. -->
+@if (cursorDroplets.length) {
+  <div class="droplet-layer" aria-hidden="true">
+    @for (d of cursorDroplets; track d.id) {
+      <div
+        class="cursor-droplet"
+        [style.transform]="'translate(-50%, -50%) translate(' + d.x + 'px,' + d.y + 'px)'"
+      ></div>
+    }
+  </div>
+}
 
-      <p>{{color.name}}</p>
+<!-- Sakura petals + maple leaves (rain-mode companion): fluttering pink
+     petals and multi-colored maple leaves drift down, land on the water
+     for ~3 s, then fade. -->
+@if (sakuraPetals.length) {
+  <div class="sakura-layer" aria-hidden="true">
+    @for (p of sakuraPetals; track p.id) {
+      <div
+        class="sakura-petal"
+        [class.leaf]="p.kind === 'leaf'"
+        [style.left.px]="p.x"
+        [style.width.px]="p.w"
+        [style.height.px]="p.h"
+        [style.--drift.px]="p.drift"
+        [style.--scale]="p.scale"
+        [style.--land-y]="p.landY + 'vh'"
+        [style.--rot-start]="p.rotStart + 'deg'"
+        [style.--rot-end]="p.rotEnd + 'deg'"
+        [style.animation-delay.s]="p.delay"
+      >
+        @if (p.kind === 'sakura') {
+          <!-- Rounded pointed petal with a soft notch at the wider end. -->
+          <svg viewBox="0 0 24 26" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M12 2 C 16 4, 21 8, 20 15 C 19 21, 15 24, 12.5 22 C 12.2 21.5, 11.8 21.5, 11.5 22 C 9 24, 5 21, 4 15 C 3 8, 8 4, 12 2 Z"
+              [attr.fill]="p.color"
+              stroke="rgba(180, 90, 120, 0.35)"
+              stroke-width="0.4"
+            />
+          </svg>
+        } @else {
+          <!-- Spade-shaped leaf: pointed tip at the top, wider rounded
+               shoulders below, with a small heart-notch at the base and
+               a short stem. viewBox 100×110. -->
+          <svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M 50 6
+                 C 78 20, 96 48, 86 74
+                 C 78 92, 62 96, 52 86
+                 C 51 84, 49 84, 48 86
+                 C 38 96, 22 92, 14 74
+                 C 4 48, 22 20, 50 6 Z"
+              [attr.fill]="p.color"
+              stroke="rgba(60, 40, 20, 0.85)"
+              stroke-width="2"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+            />
+            <g
+              [attr.stroke]="p.color"
+              stroke-opacity="0.9"
+              stroke-width="1.4"
+              stroke-linecap="round"
+              fill="none"
+              style="filter: brightness(0.45);"
+            >
+              <line x1="50" y1="14" x2="50" y2="88" />
+              <line x1="50" y1="38" x2="78" y2="46" />
+              <line x1="50" y1="38" x2="22" y2="46" />
+              <line x1="50" y1="62" x2="82" y2="68" />
+              <line x1="50" y1="62" x2="18" y2="68" />
+            </g>
+            <line x1="50" y1="90" x2="50" y2="106" stroke="rgba(80, 50, 25, 0.9)" stroke-width="2.4" stroke-linecap="round" />
+          </svg>
+        }
+      </div>
+    }
+  </div>
+}
 
-    </div>
-
-  }
-
+<!-- Palette-name overlay (feature #9): elegant serif label that fades in
+     briefly whenever the palette changes or is pinned. -->
+<div
+  class="palette-label"
+  aria-hidden="true"
+  [class.visible]="paletteLabelVisible"
+>
+  {{ paletteLabel }}
 </div>

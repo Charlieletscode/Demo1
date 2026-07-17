@@ -151,7 +151,7 @@ const PALETTES: Record<string, { hex: string }[]> = {
 };
 
 @Component({
-  selector: 'app-page-first',
+  selector: 'app-page-color',
   imports: [FormsModule],
   templateUrl: './page-first.html',
   styleUrl: './page-first.scss',

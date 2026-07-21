@@ -15,26 +15,7 @@
     </div>
   </div>
 
-  <div class="palette-grid">
-    @if (loading) {
-      @for (i of [1, 2, 3, 4, 5]; track i) {
-        <div class="color-card skeleton"></div>
-      }
-    } @else {
-      @for (c of colors; track c.hex; let i = $index) {
-        <div 
-          class="color-card" 
-          [style.backgroundColor]="c.hex"
-          [style.color]="textColor(c)"
-          [style.animationDelay]="(i * 0.1) + 's'"
-          (click)="selectColor(c)"
-          (mouseenter)="onCardEnter(c)"
-          (mouseleave)="onCardLeave()">
-          
-        </div>
-      }
-    }
-  </div>
+  <!-- PALETTE GRID REMOVED -->
 </div>
 
 @if (showRainbow) {
